@@ -56,8 +56,6 @@ def loadfile_config(file_name, tmp_dict):
 def import_pq_data(filename):
 	abs_pq_data_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(pq_path,config_dict['pq'])))
 	global db_path
-	#global project_path
-	#global module_path
 	final_db_path = os.path.join(project_path,os.path.join(module_path,db_path))
 	import_count = 0
 	with open(os.path.join(abs_pq_data_path,filename),'r') as r:
@@ -78,9 +76,6 @@ def import_pq_data(filename):
 					log.info(value+'commit transacation')
 		 			conn.commit()
 		conn.close()
-		#print "\033[1;35m*********************************\033[0m"
-		#print "\033[1;35m* 共导入%d条数据 \033[0m" % import_count
-		#print "\033[1;35m*********************************\033[0m"
 
 	debug_info.append("导入 "+filename+ " 数据:OK")
 	debug_info.append("导入:"+str(import_count)+" 条")
@@ -144,7 +139,6 @@ panel_dst_path = 'tvconfig/config/panel'
 panel_src_path = 'panel_test'
 def set_panel(panel,board_type):
 	panel = panel.strip(".ini")
-	print panel+' '+board_type
 	file_list = os.listdir(os.path.join(project_path,panel_src_path))
 	tmp_file_name = ''
 	for file in file_list:
@@ -200,15 +194,10 @@ def search_file(path,files):
 		for file in files:
 			if os.path.isfile(fp) and file == filename:
 				exists_file.append(file)
-				print fp
 		 		break
-	#for item in exists_file:
-	#	print "exists:"+item
-		
 
 def PQ_test(pq):
 	abs_src_path = os.path.join(project_path,os.path.join(pq_path,pq))
-	print "PQ_test:"+abs_src_path
 	find_file = ["Main.bin","Main_Text.bin","DLC.ini","ColorMatrix.ini","ColorTemp.txt","nonlinear.txt"]
 	search_file(abs_src_path,find_file)
 	tmp_list = []  
@@ -225,32 +214,16 @@ def set_PQ(pq):
 	abs_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,PQ_dst_path)))
 	abs_dlc_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,DLC_dst_path)))
 	abs_color_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,color_dst_path)))
-	#file_list = os.listdir(os.path.join(project_path,PQ_src_path))
 	file_list = os.listdir(abs_src_path)
-	#print file_list
 	for file in file_list:
-		print file
 		if file == "Main.bin" or file == "Main_Text.bin":
-		#	CMD = ["cp", os.path.join(abs_src_path,file),abs_dst_path]
-		#	print "111"
 			shutil.copy(os.path.join(abs_src_path,file),abs_dst_path)
 		elif file == "DLC.ini":
-		#elif re.match('DLC.ini',file):
-		#	CMD = ["cp", os.path.join(abs_src_path,file),abs_dlc_dst_path]
-		#	print "222"
 			shutil.copy(os.path.join(abs_src_path,file),abs_dlc_dst_path)
 		elif file == "ColorMatrix.ini":
-		#elif re.match('ColorMatrix.ini',file):
-		#	CMD = ["cp", os.path.join(abs_src_path,file),abs_color_dst_path]
-		#	print "333"
 			shutil.copy(os.path.join(abs_src_path,file),abs_color_dst_path)
 		else:
 			continue
-		#try:
-		#	out = subprocess.check_call(CMD, shell=False)
-		#except subprocess.CalledProcessError as err:
-		#	print "cp Error"
-		#	break
 	debug_info.append("设置 PQ:OK")
 
 build_prop_path = 'system'
@@ -342,27 +315,10 @@ def delete_APK():
 	for filename in os.listdir(abs_apk_dst_path):
 		if filename in apk_list:
 			shutil.rmtree(os.path.join(abs_apk_dst_path,filename))
-'''
-def list_default_APK(path):
-    with open(os.path.join(os.path.abspath("."), 'apklist.txt'), 'w+') as w:
-        for file in os.listdir(os.path.abspath(path)):
-            w.write(file + "\n")
-
-
-def set_APK(add_path, default_path):
-    with open(os.path.join(os.path.abspath("."), 'apklist.txt'), 'a') as w:
-        for file in os.listdir(os.path.abspath(add_path)):
-            now_date = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            w.write(file + "+" + now_date + "\n")
-            shutil.copyfile(os.path.join(os.path.abspath(add_path), file),
-                            os.path.join(os.path.abspath(default_path), file))
-
-'''
 
 make_usb_upgrade_file_path = 'my_scripts/MM_scripts'
 def format_make(filename):
 	abs_path = os.path.join(os.path.join(os.path.abspath("."),project_path),make_usb_upgrade_file_path)
-	print abs_path
 	CMD = ["find", abs_path, "-name", "make_usb_upgrade_tmp.sh"]
 	out = ''
 	try:
@@ -411,16 +367,8 @@ def format_make(filename):
 				w.write(line)
 origin_path = os.path.abspath(os.curdir)
 def make_image():
-    # print os.path.abspath(".")+"/images/out"
-    # CMD = ["cd",os.path.abspath(".")+"/images/out"]
-    # try:
-    #	out = subprocess.check_call(CMD,shell = True)
-    # except subprocess.CalledProcessError as err:
-    #	print "cd error!"
 	os.chdir(os.path.join(project_path,'my_scripts'))
-	#os.chdir(module_path)
 	CMD = ['./build.sh '+config_dict['moduleType']]
-	#CMD = ['./build.sh ']
 	try:
 		out = subprocess.check_call(CMD, shell=True)
 	except subprocess.CalledProcessError as err:
@@ -452,8 +400,6 @@ set_timezone(config_dict['timezone'])
 set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_density'])
 set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
-#list_default_APK(default_apk_path)
-#add_APK(add_apk_path, default_apk_path)
 format_make('make_usb_upgrade.sh')
 make_image()
 delete_APK()
