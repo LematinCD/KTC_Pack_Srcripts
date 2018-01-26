@@ -9,11 +9,6 @@ import subprocess
 import logging
 import time
 
-# import zipfile
-# from unrar import rarfile
-# import tarfile
-# from PIL import Image
-
 project_path =''
 module_path = ''
 db_path = 'tvdatabase/Database/'
@@ -244,7 +239,21 @@ def set_build_prop(boardType,DDRSize,lcd_density):
 	debug_info.append("设置版型:OK")
 	debug_info.append("设置内存大小:OK")
 	debug_info.append("设置DPI:OK")
-#def set_UARTOnOff():
+
+uart_path = "scripts"
+
+def set_UARTOnOff(uart_status):
+	print uart_status
+	abs_uart_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,os.path.join(uart_path,'set_config'))))
+	with open(abs_uart_path, 'r') as r:
+		lines = r.readlines()
+	with open(abs_uart_path, 'w') as w:
+		for line in lines:
+			if line.startswith('setenv UARTOnOff'):
+				w.write(re.sub(r'setenv UARTOnOff (.*)','setenv UARTOnOff '+uart_status,line))
+			else:
+				w.write(line)
+
 
 
 Logo_src_path = 'logo_tmp'
@@ -255,13 +264,16 @@ def set_Logo(logo_set):
 	if logo_set == 'default':
 		pass
 	else:
+		if not os.listdir(abs_Logo_src_path):
+			print "dir empty"
+			sys.exit(1)
 		for filename in os.listdir(abs_Logo_src_path):
 			fp =os.path.join(abs_Logo_src_path,filename)
 			if os.path.isfile(fp) and logo_set == filename:
 	 			shutil.copyfile(os.path.join(abs_Logo_src_path,logo_set),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
 				print "exists!!!"
 			else:
-				print "not exists!!!"
+				print "Logo file not exists!!!"
 		shutil.rmtree(abs_Logo_src_path)
 		os.mkdir(abs_Logo_src_path)
 	debug_info.append("设置Logo:OK")
@@ -275,6 +287,9 @@ def set_animation(animation):
 	if animation == 'default':
 		pass
 	else:
+		if not os.listdir(abs_animation_src_path):
+			print "animation dir empty!"
+			sys.exit(1)
 		for filename in os.listdir(abs_animation_src_path):
 			fp =os.path.join(abs_animation_src_path,filename)
 			if os.path.isfile(fp) and animation == filename:
@@ -300,6 +315,9 @@ def set_apk(apk):
 	if apk == 'default':
 		pass
 	else:
+		if not os.listdir(abs_apk_src_path):
+			print "apk dir empty!"
+			sys.exit(1)
 		for filename in os.listdir(abs_apk_src_path):
 			apk_list.append(filename.strip(".apk"))
 			fp = os.path.join(abs_apk_src_path,filename)
@@ -385,7 +403,6 @@ code_restore()
 loadfile_config('swinfo.txt', config_dict)
 set_project_module_path(config_dict['project'],config_dict['moduleType'])
 
-
 loadfile_config('country.txt', country_dict)
 loadfile_config('language.txt', language_dict)
 loadfile_config('timezone.txt', timezone_dict)
@@ -400,6 +417,8 @@ set_timezone(config_dict['timezone'])
 set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_density'])
 set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
+set_UARTOnOff(config_dict['UARTOnOff'])
+
 format_make('make_usb_upgrade.sh')
 make_image()
 delete_APK()
