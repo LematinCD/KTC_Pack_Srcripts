@@ -7,6 +7,7 @@ import sqlite3
 import shutil
 import subprocess
 import logging
+import logging.handlers
 import time
 
 project_path =''
@@ -14,8 +15,8 @@ module_path = ''
 db_path = 'tvdatabase/Database/'
 pq_path = 'pq_test'
 tups = ('mode', 'type')
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger('db_log')
+#logging.basicConfig(level=logging.INFO)
+#log = logging.getLogger('db_log')
 country_dict = {}
 language_dict = {}
 timezone_dict = {}
@@ -29,6 +30,18 @@ def code_restore():
 	except subprocess.CalledProcessError as err:
 		print "Code Restore Error!"
 	debug_info.append("文件还原:OK")
+
+log_path = "Log"
+
+log = logging.getLogger(__name__)
+def set_logging():
+	log.setLevel(logging.INFO)
+	handler = logging.handlers.TimedRotatingFileHandler(os.path.join(os.path.abspath("."),os.path.join(log_path,'makebin.log')),when='D',interval=1,backupCount=30)
+	handler.setLevel(logging.INFO)
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	handler.setFormatter(formatter)
+	log.addHandler(handler)
+
 
 
 def throws():
@@ -400,6 +413,7 @@ def make_image():
 start_time = time.time()
 
 code_restore()
+set_logging()
 loadfile_config('swinfo.txt', config_dict)
 set_project_module_path(config_dict['project'],config_dict['moduleType'])
 
