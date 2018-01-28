@@ -77,25 +77,31 @@ def import_pq_data(filename):
 	abs_pq_data_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(pq_path,config_dict['pq'])))
 	final_db_path = os.path.join(project_path,os.path.join(module_path,db_path))
 	import_count = 0
-	with open(os.path.join(abs_pq_data_path,filename),'r') as r:
+	try:
+		r = open(os.path.join(abs_pq_data_path,filename),'r')
+	except IOError:
+		log.error("Error: Open "+ filename + " fail!")
+		error_dict[filename] = 'none'
+		return
+	else:
 		lines = r.readlines()
-		conn = sqlite3.connect(os.path.join(final_db_path,'factory.db'))
-		c = conn.cursor()
-		for (num,value) in enumerate(lines):
-			if re.match('UPDATE(\s*)tbl_(.*);(\s*)$',value):
-				import_count = import_count + 1
-				try:
-					c.execute(value)
-				except:
-					conn.rollback()
-					log.error('Rolling back transaction')
-					log.error("Error_LineNum:"+str(num)+"  value:"+value)
-					error_dict[filename] = 'fail'
-					return
-				else:
-					log.info(value+'commit transacation')
-		 	 		conn.commit()
-		conn.close()
+	conn = sqlite3.connect(os.path.join(final_db_path,'factory.db'))
+	c = conn.cursor()
+	for (num,value) in enumerate(lines):
+		if re.match('UPDATE(\s*)tbl_(.*);(\s*)$',value):
+			import_count = import_count + 1
+			try:
+				c.execute(value)
+			except:
+				conn.rollback()
+				log.error('Rolling back transaction')
+				log.error("Error_LineNum:"+str(num)+"  value:"+value)
+				error_dict[filename] = 'fail'
+				return
+			else:
+				#log.info(value+'commit transacation')
+				conn.commit()
+	conn.close()
 	debug_info.append("导入 "+filename+ " 数据:OK")
 	debug_info.append("导入:"+str(import_count)+" 条")
 
@@ -175,7 +181,6 @@ def set_panel(panel,board_type):
 				log.error("set panel file copy error")
 				error_dict['copy_panel_file'] = 'fail'
 	if tmp_file_name == '':
-				print "not exists!!!"
 		log.error("No panel file")
 		error_dict['panel'] = 'none'
 		return
@@ -273,7 +278,6 @@ def set_build_prop(boardType,DDRSize,lcd_density,SDA):
 uart_path = "scripts"
 
 def set_UARTOnOff(uart_status):
-	#print uart_status
 	abs_uart_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,os.path.join(uart_path,'set_config'))))
 	with open(abs_uart_path, 'r') as r:
 		lines = r.readlines()
@@ -291,6 +295,7 @@ Logo_dst_path = 'tvconfig'
 def set_Logo(logo_set):
 	abs_Logo_src_path = os.path.join(os.path.abspath("."),Logo_src_path)
 	abs_Logo_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,Logo_dst_path)))
+	print abs_Logo_dst_path
 	if logo_set == 'default':
 		pass
 	else:
@@ -303,9 +308,8 @@ def set_Logo(logo_set):
 	 			shutil.copyfile(os.path.join(abs_Logo_src_path,logo_set),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
 			else:
 				error_dict['logo_file'] = 'none'
-		shutil.rmtree(abs_Logo_src_path)
-		os.mkdir(abs_Logo_src_path)
 	debug_info.append("设置Logo:OK")
+
 
 
 Animation_src_path = 'animation_tmp'
@@ -323,20 +327,23 @@ def set_animation(animation):
 			fp =os.path.join(abs_animation_src_path,filename)
 			if os.path.isfile(fp) and animation == filename:
 	 			shutil.copyfile(os.path.join(abs_animation_src_path,animation),os.path.join(abs_animation_dst_path,'bootanimation'))
-				#print "exists!!!"
 			else:
 				error_dict['animation_file'] = 'none'
-		shutil.rmtree(abs_animation_src_path)
-		os.mkdir(abs_animation_src_path)
 	debug_info.append("设置开机动画:OK")
 		
 
+def remove_Logo_Animation():
+	abs_Logo_src_path = os.path.join(os.path.abspath("."),Logo_src_path)
+	abs_animation_src_path = os.path.join(os.path.abspath("."),Animation_src_path)
+	shutil.rmtree(abs_Logo_src_path)
+	os.mkdir(abs_Logo_src_path)
+	shutil.rmtree(abs_animation_src_path)
+	os.mkdir(abs_animation_src_path)
 
 
 apk_dst_path = 'system/app'
 apk_src_path = 'apklist_tmp'
 apk_list = []
-
 def set_apk(apk):
 	abs_apk_src_path = os.path.join(os.path.abspath("."),apk_src_path)
 	abs_apk_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,apk_dst_path)))
@@ -359,15 +366,12 @@ def set_apk(apk):
 
 def print_info():
 	if error_dict:
-		tmp_dict = {'status':'fail',}
-		final_dict = {}
-		final_dict = error_dict.copy()
-		final_dict.update(tmp_dict)
-		json_str = json.dumps(final_dict)
-		print json_str
+		error_dict['status'] = 'fail'
+		print json.dumps(error_dict)
 		sys.exit(1)
 	else:
 		tmp_dict = {'status':'success'}
+		print json.dumps(tmp_dict)
 
 
 
@@ -377,35 +381,36 @@ def delete_APK():
 		if filename in apk_list:
 			shutil.rmtree(os.path.join(abs_apk_dst_path,filename))
 
+
 make_usb_upgrade_file_path = 'my_scripts/MM_scripts'
 def format_make(filename):
-	abs_path = os.path.join(os.path.join(os.path.abspath("."),project_path),make_usb_upgrade_file_path)
-	CMD = ["find", abs_path, "-name", "make_usb_upgrade_tmp.sh"]
+	abs_make_path = os.path.join(os.path.join(os.path.abspath("."),project_path),make_usb_upgrade_file_path)
+	CMD = ["find", abs_make_path, "-name", "make_usb_upgrade_tmp.sh"]
 	out = ''
 	try:
 		out = subprocess.check_output(CMD, shell=False)
 	except subprocess.CalledProcessError as err:
 		print "find error"
 	if out == '':
-		CMD = ["cp", os.path.join(abs_path, 'make_usb_upgrade.sh'),os.path.join(abs_path, 'make_usb_upgrade_tmp.sh')]
+		CMD = ["cp", os.path.join(abs_make_path, 'make_usb_upgrade.sh'),os.path.join(abs_make_path, 'make_usb_upgrade_tmp.sh')]
 		try:
 			out = subprocess.check_output(CMD, shell=False)
 		except subprocess.CalledProcessError as err:
 			print "cp error1"
 	else:
-		CMD = ["cp", os.path.join(abs_path, 'make_usb_upgrade_tmp.sh'),os.path.join(abs_path, 'make_usb_upgrade.sh')]
+		CMD = ["cp", os.path.join(abs_make_path, 'make_usb_upgrade_tmp.sh'),os.path.join(abs_make_path, 'make_usb_upgrade.sh')]
 		try:
 			out = subprocess.check_output(CMD, shell=False)
 		except subprocess.CalledProcessError as err:
 			print "cp error2"
-	with open(os.path.join(abs_path,filename), 'r') as r:
+	with open(os.path.join(abs_make_path,filename), 'r') as r:
 		lines = r.readlines()
-	with open(os.path.join(abs_path,filename), 'w') as w:
+	with open(os.path.join(abs_make_path,filename), 'w') as w:
 		flag = False
 		my_tmp = ''
 		for line in lines:
 			for tup in tups:
-				if re.match('^(\s*)select(\s*)' + tup + '(.*)', line): 
+				if re.match('^(\s*) select(\s*)' + tup + '(.*)', line): 
 					my_tmp = tup
 			if re.match('^(\s*)select(.*)', line) or re.match('^(\s*)break;(.*)', line):
 				flag = True
@@ -413,19 +418,20 @@ def format_make(filename):
 				flag = False
 				w.write('#' + line)
 				w.write('\t' + my_tmp + '=' + "'" + config_dict[my_tmp] + "'")
-				continue 
+				continue  
 			elif re.match('^(\s*)done(.*)', line) and (flag == True):
 				flag = False
 				w.write('#' + line)
-				continue
+				continue 
 			elif re.match('(\s*)read(\s*)-p(\s*)"Full Upgrade(.*)', line):
 				w.write('# ' + line)
-				w.write('tmp=' + "'" + config_dict['tmp'] + "'" + '\n')
-				continue
+				w.write('tmp=' + "'" +'Y' + "'" + '\n')
+				continue 
 			if flag:
 				w.write('#' + line)
 			elif not flag:
 				w.write(line)
+
 origin_path = os.path.abspath(os.curdir)
 def make_image():
 	os.chdir(os.path.join(project_path,'my_scripts'))
@@ -437,7 +443,7 @@ def make_image():
 	os.chdir(origin_path)
 
 
-# if __name__=='__main__'	:
+if __name__=='__main__'	:
 
 
 start_time = time.time()
@@ -466,6 +472,7 @@ print_info()
 format_make('make_usb_upgrade.sh')
 make_image()
 delete_APK()
+remove_Logo_Animation()
 end_time = time.time()
 print "\033[1;35m****************打包完成*****************\033[0m"
 for item in debug_info:
