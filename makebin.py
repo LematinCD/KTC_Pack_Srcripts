@@ -295,7 +295,6 @@ Logo_dst_path = 'tvconfig'
 def set_Logo(logo_set):
 	abs_Logo_src_path = os.path.join(os.path.abspath("."),Logo_src_path)
 	abs_Logo_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,Logo_dst_path)))
-	print abs_Logo_dst_path
 	if logo_set == 'default':
 		pass
 	else:
@@ -382,6 +381,22 @@ def delete_APK():
 			shutil.rmtree(os.path.join(abs_apk_dst_path,filename))
 
 
+
+
+build_path = 'my_scripts'
+MM_scripts_path = 'my_scripts/MM_scripts'
+def copy_scripts():
+	abs_scripts_src_path = os.path.join(os.path.abspath("."),'my_scripts')
+	abs_build_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,build_path))
+	abs_MM_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,MM_scripts_path))
+	for file in os.listdir(abs_scripts_src_path):
+		if file == 'build.sh':
+			shutil.copy(os.path.join(abs_scripts_src_path,file),abs_build_dst_path)
+		elif file == 'releaseimage.sh' or file == 'make_usb_upgrade.sh':
+			shutil.copy(os.path.join(abs_scripts_src_path,file),abs_MM_dst_path)
+
+
+
 make_usb_upgrade_file_path = 'my_scripts/MM_scripts'
 def format_make(filename):
 	abs_make_path = os.path.join(os.path.join(os.path.abspath("."),project_path),make_usb_upgrade_file_path)
@@ -443,7 +458,7 @@ def make_image():
 	os.chdir(origin_path)
 
 
-if __name__=='__main__'	:
+#if __name__=='__main__'	:
 
 
 start_time = time.time()
@@ -453,6 +468,7 @@ set_logging()
 loadfile_config('swinfo.txt', config_dict)
 set_project_module_path(config_dict['project'],config_dict['moduleType'])
 
+copy_scripts()
 loadfile_config('country.txt', country_dict)
 loadfile_config('language.txt', language_dict)
 loadfile_config('timezone.txt', timezone_dict)
