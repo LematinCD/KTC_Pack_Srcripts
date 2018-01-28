@@ -9,38 +9,48 @@ import subprocess
 import logging
 import logging.handlers
 import time
+import json
 
 project_path =''
 module_path = ''
 db_path = 'tvdatabase/Database/'
 pq_path = 'pq_test'
 tups = ('mode', 'type')
-#logging.basicConfig(level=logging.INFO)
-#log = logging.getLogger('db_log')
 country_dict = {}
 language_dict = {}
 timezone_dict = {}
 config_dict = {}
+
 debug_info = []
+error_dict = {}
+
+log_path = "Log"
+log = logging.getLogger(__name__)
+def set_logging():
+	abs_log_path = os.path.join(os.path.abspath("."),log_path)
+	if not os.path.exists(abs_log_path):
+		os.makedirs(abs_log_path)
+	log.setLevel(logging.INFO)
+	handler = logging.handlers.TimedRotatingFileHandler(os.path.join(abs_log_path,'makebin.log'),when='D',interval=1,backupCount=30)
+	handler.setLevel(logging.INFO)
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	handler.setFormatter(formatter)
+	log.addHandler(handler)
+
+
 #还原repo库
 def code_restore():
 	CMD = ['repo','forall','-c','git','checkout','.']
 	try:
 		out = subprocess.check_output(CMD, shell = False)
 	except subprocess.CalledProcessError as err:
-		print "Code Restore Error!"
-	debug_info.append("文件还原:OK")
+		log.error("Code Restore Fail!")
+		error_dict['code_restore'] = 'fail'
+		return
+	else:
+		log.info("Code Restore Succees")
+		debug_info.append("Code Restore:Success")
 
-log_path = "Log"
-
-log = logging.getLogger(__name__)
-def set_logging():
-	log.setLevel(logging.INFO)
-	handler = logging.handlers.TimedRotatingFileHandler(os.path.join(os.path.abspath("."),os.path.join(log_path,'makebin.log')),when='D',interval=1,backupCount=30)
-	handler.setLevel(logging.INFO)
-	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-	handler.setFormatter(formatter)
-	log.addHandler(handler)
 
 
 
@@ -51,9 +61,11 @@ def loadfile_config(file_name, tmp_dict):
     try:
         f = open(file_name, 'r')
     except IOError:
-        print "Error: Open " + file_name + " fail!"
+		log.error("Error: Open " + file_name + " fail!")
+		error_dict[file_name] = 'fail'
+		return
     else:
-        print "Open " + file_name + " successfully!"
+        log.info("Open " + file_name + " successfully!")
         for line in f.readlines():
             line = line.strip()
             if not len(line):
@@ -63,7 +75,6 @@ def loadfile_config(file_name, tmp_dict):
 
 def import_pq_data(filename):
 	abs_pq_data_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(pq_path,config_dict['pq'])))
-	global db_path
 	final_db_path = os.path.join(project_path,os.path.join(module_path,db_path))
 	import_count = 0
 	with open(os.path.join(abs_pq_data_path,filename),'r') as r:
@@ -78,13 +89,13 @@ def import_pq_data(filename):
 				except:
 					conn.rollback()
 					log.error('Rolling back transaction')
-					print "Error_LineNum:"+str(num)+"  value:"+value
-					raise
+					log.error("Error_LineNum:"+str(num)+"  value:"+value)
+					error_dict[filename] = 'fail'
+					return
 				else:
 					log.info(value+'commit transacation')
-		 			conn.commit()
+		 	 		conn.commit()
 		conn.close()
-
 	debug_info.append("导入 "+filename+ " 数据:OK")
 	debug_info.append("导入:"+str(import_count)+" 条")
 
@@ -104,19 +115,21 @@ def set_country_language(country, language):
 			country_key = key1
 			break
 	if country_key == "":
-		print "The Country doesn't exist'!"
+		log.error("The Country doesn't exist'!")
+		error_dict['country'] = 'none'
 		return
 	for key2 in sorted(language_dict.keys()):
 		if str(language).lower() == key2.lower():
 			language_key = key2
 			break
 	if language_key == "":
-		print "The Language doesn't exist'!"
+		log.error("The Language doesn't exist'!")
+		error_dict['language'] = 'none'
 		return
 	abs_db_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,db_path)))
 	conn = sqlite3.connect(os.path.join(abs_db_path, 'user_setting.db'))
 	c = conn.cursor()
-	print "Open user_setting.db successfully!"
+	log.info("Open user_setting.db successfully!")
 	sql = "UPDATE tbl_SystemSetting set Country = ?,Language = ?"
 	c.execute(sql, (country_dict[country_key], language_dict[language_key]))
 	conn.commit()
@@ -131,12 +144,13 @@ def set_timezone(timezone):
 			timezone_key = key
 			break
 	if timezone_key == "":
-		print "The timezone doesn't exist'!"
+		log.error("The timezone doesn't exist'!")
+		error_dict['timezone'] = 'none'
 		return
 	abs_db_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,db_path)))
 	conn = sqlite3.connect(os.path.join(abs_db_path, 'user_setting.db'))
 	c = conn.cursor()
-	print "Open user_setting.db successfully!"
+	log.info("Open user_setting.db successfully!")
 	sql = "UPDATE tbl_TimeSetting set eTimeZoneInfo = ?"
 	c.execute(sql, (timezone_dict[timezone_key],))
 	conn.commit()
@@ -158,9 +172,12 @@ def set_panel(panel,board_type):
 			try:
 				out = subprocess.check_call(CMD, shell=False)
 			except subprocess.CalledProcessError as err:
-				print "cp Error"
+				log.error("set panel file copy error")
+				error_dict['copy_panel_file'] = 'fail'
 	if tmp_file_name == '':
-		print "No panel file!!!"
+				print "not exists!!!"
+		log.error("No panel file")
+		error_dict['panel'] = 'none'
 		return
 	final_panel_path = os.path.join(project_path,os.path.join(module_path,panel_cus_path))
 	with open(os.path.join(final_panel_path,'Customer_1.ini'), 'r') as r:
@@ -211,11 +228,9 @@ def PQ_test(pq):
 	tmp_list = []  
 	tmp_list = list(set(find_file).difference(set(exists_file)))
 	if tmp_list:	
-		with open("pq_not_exists.txt",'w') as w:
-			for item in tmp_list:
-				w.write(item+'\n')
-		sys.exit(1)
-	
+		for item in tmp_list:
+			error_dict[item] = 'none'
+		return
 
 def set_PQ(pq):
 	abs_src_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(PQ_src_path,pq)))
@@ -235,7 +250,7 @@ def set_PQ(pq):
 	debug_info.append("设置 PQ:OK")
 
 build_prop_path = 'system'
-def set_build_prop(boardType,DDRSize,lcd_density):
+def set_build_prop(boardType,DDRSize,lcd_density,SDA):
 	final_build_prop_path = os.path.join(project_path,os.path.join(module_path,build_prop_path))
 	with open(os.path.join(final_build_prop_path,'build.prop'), 'r') as r:
 		lines = r.readlines()
@@ -247,6 +262,8 @@ def set_build_prop(boardType,DDRSize,lcd_density):
 				w.write(re.sub(r'=(.*)',"="+DDRSize, line))
 			elif line.startswith('ro.sf.lcd_density='):
 				w.write(re.sub(r'=(.*)',"="+lcd_density, line))
+			elif line.startswith('ro.product.serial'):
+				w.write(re.sub(r'=(.*)',"=SDA"+SDA, line))
 			else:
 				w.write(line)
 	debug_info.append("设置版型:OK")
@@ -256,7 +273,7 @@ def set_build_prop(boardType,DDRSize,lcd_density):
 uart_path = "scripts"
 
 def set_UARTOnOff(uart_status):
-	print uart_status
+	#print uart_status
 	abs_uart_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,os.path.join(uart_path,'set_config'))))
 	with open(abs_uart_path, 'r') as r:
 		lines = r.readlines()
@@ -278,15 +295,14 @@ def set_Logo(logo_set):
 		pass
 	else:
 		if not os.listdir(abs_Logo_src_path):
-			print "dir empty"
-			sys.exit(1)
+			error_dict['logo_dir'] = 'empty'
+			return
 		for filename in os.listdir(abs_Logo_src_path):
 			fp =os.path.join(abs_Logo_src_path,filename)
 			if os.path.isfile(fp) and logo_set == filename:
 	 			shutil.copyfile(os.path.join(abs_Logo_src_path,logo_set),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
-				print "exists!!!"
 			else:
-				print "Logo file not exists!!!"
+				error_dict['logo_file'] = 'none'
 		shutil.rmtree(abs_Logo_src_path)
 		os.mkdir(abs_Logo_src_path)
 	debug_info.append("设置Logo:OK")
@@ -301,21 +317,20 @@ def set_animation(animation):
 		pass
 	else:
 		if not os.listdir(abs_animation_src_path):
-			print "animation dir empty!"
-			sys.exit(1)
+			error_dict['animation_dir'] = 'empty'
+			return
 		for filename in os.listdir(abs_animation_src_path):
 			fp =os.path.join(abs_animation_src_path,filename)
 			if os.path.isfile(fp) and animation == filename:
 	 			shutil.copyfile(os.path.join(abs_animation_src_path,animation),os.path.join(abs_animation_dst_path,'bootanimation'))
-				print "exists!!!"
+				#print "exists!!!"
 			else:
-				print "not exists!!!"
+				error_dict['animation_file'] = 'none'
 		shutil.rmtree(abs_animation_src_path)
 		os.mkdir(abs_animation_src_path)
 	debug_info.append("设置开机动画:OK")
 		
 
-# def set_SDA(sdanum):
 
 
 apk_dst_path = 'system/app'
@@ -329,16 +344,31 @@ def set_apk(apk):
 		pass
 	else:
 		if not os.listdir(abs_apk_src_path):
-			print "apk dir empty!"
-			sys.exit(1)
+			error_dict['apk'] = 'none'
+			return
 		for filename in os.listdir(abs_apk_src_path):
 			apk_list.append(filename.strip(".apk"))
 			fp = os.path.join(abs_apk_src_path,filename)
 			if os.path.isfile(fp):
-				if not os.path.isdir(os.path.join(abs_apk_dst_path,filename.strip('.apk'))):
-					os.makedirs(os.path.join(abs_apk_dst_path,filename.strip('.apk')))
+				if  not os.path.isdir(os.path.join(abs_apk_dst_path,filename.strip('.apk'))):
+					 os.makedirs(os.path.join(abs_apk_dst_path,filename.strip('.apk')))
 				shutil.copy(os.path.join(abs_apk_src_path,filename),os.path.join(abs_apk_dst_path,filename.strip('.apk')))
 	debug_info.append("设置 APK:OK")
+
+
+
+def print_info():
+	if error_dict:
+		tmp_dict = {'status':'fail',}
+		final_dict = {}
+		final_dict = error_dict.copy()
+		final_dict.update(tmp_dict)
+		json_str = json.dumps(final_dict)
+		print json_str
+		sys.exit(1)
+	else:
+		tmp_dict = {'status':'success'}
+
 
 
 def delete_APK():
@@ -428,11 +458,11 @@ PQ_test(config_dict['pq'])
 set_PQ(config_dict['pq'])
 set_country_language(config_dict['country'], config_dict['language'])
 set_timezone(config_dict['timezone'])
-set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_density'])
+set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_density'],config_dict['SDA'])
 set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
 set_UARTOnOff(config_dict['UARTOnOff'])
-
+print_info()
 format_make('make_usb_upgrade.sh')
 make_image()
 delete_APK()
