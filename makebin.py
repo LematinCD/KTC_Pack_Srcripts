@@ -170,7 +170,7 @@ def set_panel(panel,board_type):
 	file_list = os.listdir(os.path.join(project_path,panel_src_path))
 	tmp_file_name = ''
 	for file in file_list:
-		if file.find(panel)>-1 and file.find(board_type)>-1:
+		if file.find(panel)>-1 and file.find(board_type[0:3])>-1:
 			tmp_file_name = file
 			abs_src_path=os.path.join(os.path.abspath("."),os.path.join(project_path,panel_src_path))
 			abs_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,panel_dst_path)))
@@ -303,8 +303,8 @@ def set_Logo(logo_set):
 			return
 		for filename in os.listdir(abs_Logo_src_path):
 			fp =os.path.join(abs_Logo_src_path,filename)
-			if os.path.isfile(fp) and logo_set == filename:
-	 			shutil.copyfile(os.path.join(abs_Logo_src_path,logo_set),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
+			if os.path.isfile(fp):
+	 			shutil.copyfile(os.path.join(abs_Logo_src_path,filename),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
 			else:
 				error_dict['logo_file'] = 'none'
 	debug_info.append("设置Logo:OK")
@@ -324,8 +324,8 @@ def set_animation(animation):
 			return
 		for filename in os.listdir(abs_animation_src_path):
 			fp =os.path.join(abs_animation_src_path,filename)
-			if os.path.isfile(fp) and animation == filename:
-	 			shutil.copyfile(os.path.join(abs_animation_src_path,animation),os.path.join(abs_animation_dst_path,'bootanimation'))
+			if os.path.isfile(fp):
+	 			shutil.copyfile(os. path.join(abs_animation_src_path,filename),os.path.join(abs_animation_dst_path,'bootanimation'))
 			else:
 				error_dict['animation_file'] = 'none'
 	debug_info.append("设置开机动画:OK")
