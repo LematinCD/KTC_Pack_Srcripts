@@ -450,11 +450,11 @@ def format_make(filename):
 origin_path = os.path.abspath(os.curdir)
 def make_image():
 	os.chdir(os.path.join(project_path,'my_scripts'))
-	CMD = ['./build.sh '+config_dict['moduleType']]
+	CMD = ['./build.sh '+config_dict['moduleType']+' 348_DVBT_8G']
 	try:
 		out = subprocess.check_call(CMD, shell=True)
 	except subprocess.CalledProcessError as err:
-		print "make images error!"
+		error_dict['make_image'] = 'fail'
 	os.chdir(origin_path)
 
 
@@ -484,9 +484,9 @@ set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_
 set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
 set_UARTOnOff(config_dict['UARTOnOff'])
-print_info()
 format_make('make_usb_upgrade.sh')
 make_image()
+print_info()
 delete_APK()
 remove_Logo_Animation()
 end_time = time.time()

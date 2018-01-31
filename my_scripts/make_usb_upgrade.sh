@@ -3,16 +3,18 @@ pwd
 #----------------------------------------
 # PATH Define
 #----------------------------------------
+TARGET_FILE_NAME=$1
+echo "####:$TARGET_FILE_NAME"
 TARGET_DEVICE=ktc_8g
 TARGET_DIR=$(pwd)
 #PRODUCT_BRAND=$(tr '[A-Z]' '[a-z]' <<<"$(get_build_var PRODUCT_BRAND)")
 #TARGET_DIR=$ANDROID_BUILD_TOP/../images/marshmallow/$TARGET_DEVICE
 #TARGET_DEVICE_DIR=$ANDROID_BUILD_TOP/device/$PRODUCT_BRAND/$TARGET_DEVICE
 AUTO_UPDATE_SCRIPT=$TARGET_DIR/auto_update.txt
-TMP_UPGRADE_FILE=TMP_348_DVBT_8G.bin
+TMP_UPGRADE_FILE=TMP_$TARGET_FILE_NAME.bin
 PADDED_BIN=$TARGET_DIR/padded.bin
 PAD_DUMMY_BIN=$TARGET_DIR/dummy_pad.
-UPGRADE_FILE=$TARGET_DIR/348_DVBT_8G.bin
+UPGRADE_FILE=$TARGET_DIR/$TARGET_FILE_NAME.bin
 SCRIPT_FILE=$TARGET_DIR/upgrade_script.txt
 
 #lunch `print_lunch_menu | grep aosp_$TARGET_DEVICE-userdebug | cut -d. -f1`
@@ -213,24 +215,24 @@ function func_generate_upgrade_file()
 
 function parsing_para()
 {
-    while [ $# != 0 ]; do
-        tmp1=$1
-        tmp2=`echo $1|cut -d= -f1`
-		echo "tmp1:$tmp1"
-		echo "tmp2:$tmp2"
-        case "$tmp2" in
-        "FullUpgrade" )
-            FullUpgrade=`echo $tmp1|cut -d= -f2`
-            ;;
-        * )
-            echo "unknown parameter !!"
-            exit 1
-            ;;
-        esac
-        shift
-    done
-
-    if [ "$FullUpgrade" == "Y" ];then
+    #while [ $# != 0 ]; do
+    #    tmp1=$1
+    #    tmp2=`echo $1|cut -d= -f1`
+	#	echo "tmp1:$tmp1"
+	#	echo "tmp2:$tmp2"
+    #    case "$tmp2" in
+    #    "FullUpgrade" )
+    #        FullUpgrade=`echo $tmp1|cut -d= -f2`
+    #        ;;
+    #    * )
+    #        echo "unknown parameter !!"
+    #        exit 1
+    #        ;;
+    #    esac
+    #    shift
+    #done
+    
+	if [ "$FullUpgrade" == "Y" ];then
         tmp=$FullUpgrade
     else
 #         read -p "Full Upgrade? (Y/n)" tmp
