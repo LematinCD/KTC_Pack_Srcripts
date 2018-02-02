@@ -10,6 +10,7 @@ import logging
 import logging.handlers
 import time
 import json
+import stat
 
 project_path =''
 module_path = ''
@@ -30,6 +31,7 @@ def set_logging():
 	abs_log_path = os.path.join(os.path.abspath("."),log_path)
 	if not os.path.exists(abs_log_path):
 		os.makedirs(abs_log_path)
+		os.chmod(abs_log_path,stat.S_IRWXU)
 	log.setLevel(logging.INFO)
 	handler = logging.handlers.TimedRotatingFileHandler(os.path.join(abs_log_path,'makebin.log'),when='D',interval=1,backupCount=30)
 	handler.setLevel(logging.INFO)
@@ -58,20 +60,21 @@ def throws():
 	raise RuntimeError('this is the error message')
 
 def loadfile_config(file_name, tmp_dict):
-    try:
-        f = open(file_name, 'r')
-    except IOError:
+	abs_file_path = os.path.join(os.path.abspath("."),file_name)
+	try:
+		f = open(abs_file_path, 'r')
+	except IOError:
 		log.error("Error: Open " + file_name + " fail!")
 		error_dict[file_name] = 'fail'
 		return
-    else:
-        log.info("Open " + file_name + " successfully!")
-        for line in f.readlines():
-            line = line.strip()
-            if not len(line):
-                continue
-            tmp_dict[line.split(':')[0]] = line.split(':')[1]
-        f.close()
+	else:
+		log.info("Open " + file_name + " successfully!")
+		for line in f.readlines():
+			line = line.strip()
+			if not len(line):
+				continue
+			tmp_dict[line.split(':')[0]] = line.split(':')[1]
+	f.close()
 
 def import_pq_data(filename):
 	abs_pq_data_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(pq_path,config_dict['pq'])))
@@ -312,7 +315,7 @@ def set_Logo(logo_set):
 
 
 Animation_src_path = 'animation_tmp'
-Animation_dst_path = 'system/bin'
+Animation_dst_path = 'system/media'
 def set_animation(animation):
 	abs_animation_src_path = os.path.join(os.path.abspath("."),Animation_src_path)
 	abs_animation_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,Animation_dst_path)))
@@ -325,7 +328,7 @@ def set_animation(animation):
 		for filename in os.listdir(abs_animation_src_path):
 			fp =os.path.join(abs_animation_src_path,filename)
 			if os.path.isfile(fp):
-	 			shutil.copyfile(os. path.join(abs_animation_src_path,filename),os.path.join(abs_animation_dst_path,'bootanimation'))
+	 			shutil.copyfile(os. path.join(abs_animation_src_path,filename),os.path.join(abs_animation_dst_path,'bootanimation.zip'))
 			else:
 				error_dict['animation_file'] = 'none'
 	debug_info.append("设置开机动画:OK")
@@ -369,8 +372,7 @@ def print_info():
 		print json.dumps(error_dict)
 		sys.exit(1)
 	else:
-		tmp_dict = {'status':'success'}
-		print json.dumps(tmp_dict)
+		pass
 
 def final_print_info():
 	if error_dict:
@@ -378,7 +380,8 @@ def final_print_info():
 		print json.dumps(error_dict)
 		sys.exit(1)
 	else:
-		pass
+		tmp_dict = {'status':'success'}
+		print json.dumps(tmp_dict)
 
 
 def delete_APK():
@@ -454,7 +457,7 @@ def format_make(filename):
 			elif not flag:
 				w.write(line)
 
-origin_path = os.path.abspath(os.curdir)
+origin_path = os.path.abspath('/home/ktcfwm')
 def make_image():
 	os.chdir(os.path.join(project_path,'my_scripts'))
 	CMD = ['./build.sh '+config_dict['moduleType']+' 348_DVBT_8G']
@@ -468,9 +471,10 @@ def make_image():
 #if __name__=='__main__'	:
 
 
+os.chdir('/home/ktcfwm')
 start_time = time.time()
 
-code_restore()
+#code_restore()
 set_logging()
 loadfile_config('swinfo.txt', config_dict)
 set_project_module_path(config_dict['project'],config_dict['moduleType'])
