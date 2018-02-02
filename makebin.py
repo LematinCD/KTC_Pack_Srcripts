@@ -372,6 +372,13 @@ def print_info():
 		tmp_dict = {'status':'success'}
 		print json.dumps(tmp_dict)
 
+def final_print_info():
+	if error_dict:
+		error_dict['status'] = 'fail'
+		print json.dumps(error_dict)
+		sys.exit(1)
+	else:
+		pass
 
 
 def delete_APK():
@@ -485,8 +492,9 @@ set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
 set_UARTOnOff(config_dict['UARTOnOff'])
 format_make('make_usb_upgrade.sh')
-make_image()
 print_info()
+make_image()
+final_print_info()
 delete_APK()
 remove_Logo_Animation()
 end_time = time.time()
