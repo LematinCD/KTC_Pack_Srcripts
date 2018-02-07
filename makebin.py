@@ -22,6 +22,7 @@ language_dict = {}
 timezone_dict = {}
 config_dict = {}
 
+send_info = ''
 debug_info = []
 error_dict = {}
 
@@ -48,6 +49,7 @@ def code_restore():
 	except subprocess.CalledProcessError as err:
 		log.error("Code Restore Fail!")
 		error_dict['code_restore'] = 'fail'
+		send_info+"Code Restore Fail!;"
 		return
 	else:
 		log.info("Code Restore Succees")
@@ -66,6 +68,7 @@ def loadfile_config(file_name, tmp_dict):
 	except IOError:
 		log.error("Error: Open " + file_name + " fail!")
 		error_dict[file_name] = 'fail'
+		send_info+"Open "+file_name+" Fail!;"
 		return
 	else:
 		log.info("Open " + file_name + " successfully!")
@@ -85,6 +88,7 @@ def import_pq_data(filename):
 	except IOError:
 		log.error("Error: Open "+ filename + " fail!")
 		error_dict[filename] = 'none'
+		send_info+"Open "+file_name+" Fail!;"
 		return
 	else:
 		lines = r.readlines()
@@ -100,6 +104,7 @@ def import_pq_data(filename):
 				log.error('Rolling back transaction')
 				log.error("Error_LineNum:"+str(num)+"  value:"+value)
 				error_dict[filename] = 'fail'
+				send_info+"Import "+file_name+" Data Fail! LineNum:"+str(num)+";"
 				return
 			else:
 				#log.info(value+'commit transacation')
@@ -126,6 +131,7 @@ def set_country_language(country, language):
 	if country_key == "":
 		log.error("The Country doesn't exist'!")
 		error_dict['country'] = 'none'
+		send_info+"The country " + country + " doesn't exist!;"
 		return
 	for key2 in sorted(language_dict.keys()):
 		if str(language).lower() == key2.lower():
@@ -134,14 +140,20 @@ def set_country_language(country, language):
 	if language_key == "":
 		log.error("The Language doesn't exist'!")
 		error_dict['language'] = 'none'
+		send_info+"The language " + language + " doesn't exist!;"
 		return
 	abs_db_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,db_path)))
 	conn = sqlite3.connect(os.path.join(abs_db_path, 'user_setting.db'))
 	c = conn.cursor()
 	log.info("Open user_setting.db successfully!")
 	sql = "UPDATE tbl_SystemSetting set Country = ?,Language = ?"
-	c.execute(sql, (country_dict[country_key], language_dict[language_key]))
-	conn.commit()
+	try:
+		c.execute(sql, (country_dict[country_key], language_dict[language_key]))
+	except:
+		conn.rollback()
+		send_info+"Set country language fail!;"
+	else:
+		conn.commit()
 	conn.close()
 	debug_info.append("设置国家: OK")
 	debug_info.append("设置语言: OK")
@@ -155,14 +167,19 @@ def set_timezone(timezone):
 	if timezone_key == "":
 		log.error("The timezone doesn't exist'!")
 		error_dict['timezone'] = 'none'
+		send_info+"The timezone "+ timezone + " doesn't exitst!;"
 		return
 	abs_db_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,db_path)))
 	conn = sqlite3.connect(os.path.join(abs_db_path, 'user_setting.db'))
 	c = conn.cursor()
 	log.info("Open user_setting.db successfully!")
 	sql = "UPDATE tbl_TimeSetting set eTimeZoneInfo = ?"
-	c.execute(sql, (timezone_dict[timezone_key],))
-	conn.commit()
+	try:
+		c.execute(sql, (timezone_dict[timezone_key],))
+	except:
+		send_info+"Set time zone fail!;"
+	else:
+		conn.commit()
 	conn.close()
 
 panel_cus_path = 'tvconfig/config/model'
@@ -183,9 +200,11 @@ def set_panel(panel,board_type):
 			except subprocess.CalledProcessError as err:
 				log.error("set panel file copy error")
 				error_dict['copy_panel_file'] = 'fail'
+				send_info+"Copy panel Fail!;"
 	if tmp_file_name == '':
 		log.error("No panel file")
 		error_dict['panel'] = 'none'
+		send_info+"The panel "+panel+" doesn't exists!;"
 		return
 	final_panel_path = os.path.join(project_path,os.path.join(module_path,panel_cus_path))
 	with open(os.path.join(final_panel_path,'Customer_1.ini'), 'r') as r:
@@ -229,8 +248,14 @@ def search_file(path,files):
 				exists_file.append(file)
 		 		break
 
-def PQ_test(pq):
-	abs_src_path = os.path.join(project_path,os.path.join(pq_path,pq))
+#def PQ_exists(pq):
+
+def set_PQ(pq):
+	#abs_src_path = os.path.join(project_path,os.path.join(pq_path,pq))
+	abs_src_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(PQ_src_path,pq)))
+	abs_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,PQ_dst_path)))
+	abs_dlc_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,DLC_dst_path)))
+	abs_color_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,color_dst_path)))
 	find_file = ["Main.bin","Main_Text.bin","DLC.ini","ColorMatrix.ini","ColorTemp.txt","nonlinear.txt"]
 	search_file(abs_src_path,find_file)
 	tmp_list = []  
@@ -238,13 +263,9 @@ def PQ_test(pq):
 	if tmp_list:	
 		for item in tmp_list:
 			error_dict[item] = 'none'
+			send_info+"The file "+item+" doesn't exists!;"
 		return
-
-def set_PQ(pq):
-	abs_src_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(PQ_src_path,pq)))
-	abs_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,PQ_dst_path)))
-	abs_dlc_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,DLC_dst_path)))
-	abs_color_dst_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,color_dst_path)))
+#	abs_src_path=os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(PQ_src_path,pq)))
 	file_list = os.listdir(abs_src_path)
 	for file in file_list:
 		if file == "Main.bin" or file == "Main_Text.bin":
@@ -296,6 +317,7 @@ def set_UARTOnOff(uart_status):
 Logo_src_path = 'logo_tmp'
 Logo_dst_path = 'tvconfig'
 def set_Logo(logo_set):
+	global send_info
 	abs_Logo_src_path = os.path.join(os.path.abspath("."),Logo_src_path)
 	abs_Logo_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,Logo_dst_path)))
 	if logo_set == 'default':
@@ -303,6 +325,8 @@ def set_Logo(logo_set):
 	else:
 		if not os.listdir(abs_Logo_src_path):
 			error_dict['logo_dir'] = 'empty'
+			send_info = send_info+"The logo dir is empty!;"
+			#print send_info
 			return
 		for filename in os.listdir(abs_Logo_src_path):
 			fp =os.path.join(abs_Logo_src_path,filename)
@@ -310,6 +334,7 @@ def set_Logo(logo_set):
 	 			shutil.copyfile(os.path.join(abs_Logo_src_path,filename),os.path.join(abs_Logo_dst_path,'boot0.jpg'))
 			else:
 				error_dict['logo_file'] = 'none'
+				send_info+"The logo file "+filename+" doesn't exists!;"
 	debug_info.append("设置Logo:OK")
 
 
@@ -317,6 +342,7 @@ def set_Logo(logo_set):
 Animation_src_path = 'animation_tmp'
 Animation_dst_path = 'system/media'
 def set_animation(animation):
+	global send_info
 	abs_animation_src_path = os.path.join(os.path.abspath("."),Animation_src_path)
 	abs_animation_dst_path = os.path.join(os.path.abspath("."),os.path.join(project_path,os.path.join(module_path,Animation_dst_path)))
 	if animation == 'default':
@@ -324,6 +350,8 @@ def set_animation(animation):
 	else:
 		if not os.listdir(abs_animation_src_path):
 			error_dict['animation_dir'] = 'empty'
+			send_info = send_info+"The animation dir is empty!;"
+			#print send_info
 			return
 		for filename in os.listdir(abs_animation_src_path):
 			fp =os.path.join(abs_animation_src_path,filename)
@@ -331,6 +359,7 @@ def set_animation(animation):
 	 			shutil.copyfile(os. path.join(abs_animation_src_path,filename),os.path.join(abs_animation_dst_path,'bootanimation.zip'))
 			else:
 				error_dict['animation_file'] = 'none'
+				send_info+"The animation file "+filename+" doesn't exists!;"
 	debug_info.append("设置开机动画:OK")
 		
 
@@ -354,6 +383,7 @@ def set_apk(apk):
 	else:
 		if not os.listdir(abs_apk_src_path):
 			error_dict['apk'] = 'none'
+			send_info+"The apk dir is empty!;"
 			return
 		for filename in os.listdir(abs_apk_src_path):
 			apk_list.append(filename.strip(".apk"))
@@ -365,23 +395,41 @@ def set_apk(apk):
 	debug_info.append("设置 APK:OK")
 
 
-
+tmp_dict = {}
 def print_info():
-	if error_dict:
-		error_dict['status'] = 'fail'
-		print json.dumps(error_dict)
+	#print "info:"+send_info
+	if send_info != '':
+		tmp_dict['status'] = 'error'
+		tmp_dict['message'] = send_info
+		print json.dumps(tmp_dict)
 		sys.exit(1)
 	else:
 		pass
+	#if error_dict:
+	#	error_dict['status'] = 'fail'
+	#	print json.dumps(error_dict)
+	#	sys.exit(1)
+	#else:
+	#	pass
 
 def final_print_info():
-	if error_dict:
-		error_dict['status'] = 'fail'
-		print json.dumps(error_dict)
+	#print "info111:"+send_info
+	if send_info != '':
+		tmp_dict['status'] = 'error'
+		tmp_dict['message'] = send_info
+		print json.dumps(tmp_dict)
 		sys.exit(1)
 	else:
-		tmp_dict = {'status':'success'}
+		tmp_dict['status'] = 'success'
+		tmp_dict['message'] = 'success'
 		print json.dumps(tmp_dict)
+	#if error_dict:
+	#	error_dict['status'] = 'fail'
+	#	print json.dumps(error_dict)
+	#	sys.exit(1)
+	#else:
+	#	tmp_dict = {'status':'success'}
+	#	print json.dumps(tmp_dict)
 
 
 def delete_APK():
@@ -460,7 +508,7 @@ def format_make(filename):
 origin_path = os.path.abspath('/home/ktcfwm')
 def make_image():
 	os.chdir(os.path.join(project_path,'my_scripts'))
-	CMD = ['./build.sh '+config_dict['moduleType']+' 348_DVBT_8G']
+	CMD = ['./build.sh '+config_dict['moduleType']+' 348_DVBT_8G'+' >/dev/null 2>&1']
 	try:
 		out = subprocess.check_call(CMD, shell=True)
 	except subprocess.CalledProcessError as err:
@@ -486,15 +534,16 @@ loadfile_config('timezone.txt', timezone_dict)
 import_pq_data('ColorTemp.txt')
 import_pq_data('nonlinear.txt')
 set_panel(config_dict['panel'],config_dict['boardType'])
-set_apk(config_dict['apkList'])
-PQ_test(config_dict['pq'])
+set_apk(config_dict['APK'])
+#PQ_exists(config_dict['pq'])
 set_PQ(config_dict['pq'])
 set_country_language(config_dict['country'], config_dict['language'])
 set_timezone(config_dict['timezone'])
-set_build_prop(config_dict['boardType'],config_dict['DDRSize'],config_dict['lcd_density'],config_dict['SDA'])
+set_build_prop(config_dict['boardType'],config_dict['DDRSize'],'240',config_dict['SDA'])
 set_Logo(config_dict['logo'])
 set_animation(config_dict['animation'])
-set_UARTOnOff(config_dict['UARTOnOff'])
+#set_UARTOnOff(config_dict['UARTOnOff'])
+set_UARTOnOff('Off')
 format_make('make_usb_upgrade.sh')
 print_info()
 make_image()
@@ -502,9 +551,9 @@ final_print_info()
 delete_APK()
 remove_Logo_Animation()
 end_time = time.time()
-print "\033[1;35m****************打包完成*****************\033[0m"
-for item in debug_info:
-	print "\033[1;35m       %s" % item
-print "\033[1;35m总共耗时:%s秒\033[0m" % str(end_time-start_time)
-print "\033[1;35m*****************************************\033[0m"
+#print "\033[1;35m****************打包完成*****************\033[0m"
+#for item in debug_info:
+#	print "\033[1;35m       %s" % item
+#print "\033[1;35m总共耗时:%s秒\033[0m" % str(end_time-start_time)
+#print "\033[1;35m*****************************************\033[0m"
 
